@@ -1,18 +1,29 @@
-import pytorch_lightning as pl
-
-from pytorch_lightning.callbacks import Callback, ModelCheckpoint, EarlyStopping
-from pathlib import Path
-from torch import nn
 from datetime import datetime
-from typing import Optional, Callable, Union
+from pathlib import Path
+from typing import Callable, Optional, Union
 
-from liltab.model.heterogenous_attributes_network import HeterogenousAttributesNetwork
+import pytorch_lightning as pl
+from pytorch_lightning.callbacks import (
+    Callback,
+    EarlyStopping,
+    ModelCheckpoint,
+)
+from torch import nn
+
 from liltab.data.dataloaders import (
     ComposedDataLoader,
     RepeatableOutputComposedDataLoader,
 )
-from .utils import LightningWrapper, LightningEncoderWrapper
-from .logger import TensorBoardLogger, FileLogger
+from liltab.model.heterogenous_attributes_network import (
+    HeterogenousAttributesNetwork,
+)
+
+from .logger import FileLogger, TensorBoardLogger
+from .utils import (
+    LightningAdaptiveeWrapper,
+    LightningEncoderWrapper,
+    LightningWrapper,
+)
 
 
 class HeterogenousAttributesNetworkTrainer:
@@ -57,7 +68,9 @@ class HeterogenousAttributesNetworkTrainer:
                 `tb_logger`, `model_checkpoints` is not None
         """
 
-        if not results_path and (file_logger or tb_logger or model_checkpoints):
+        if not results_path and (
+            file_logger or tb_logger or model_checkpoints
+        ):
             raise ValueError(
                 """`results_path` is required if any of (`file_logger`,
                 `tb_logger`, `model_checkpoints`) is not None"""
@@ -180,6 +193,19 @@ class HeterogenousAttributesNetworkTrainer:
         self.trainer.fit(encoder_wrapper, train_loader, val_loader)
         return encoder_wrapper
 
+    def pretrain_adaptivee(
+        self,
+        model: HeterogenousAttributesNetwork,
+        train_loader: ComposedDataLoader | RepeatableOutputComposedDataLoader,
+    ) -> tuple[LightningWrapper, list[dict[str, float]]]:
+        encoder_wrapper = LightningAdaptiveeWrapper(
+            model,
+            learning_rate=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
+        self.trainer.fit(encoder_wrapper, train_loader)
+        return encoder_wrapper
+
 
 class LoggerCallback(Callback):
     def __init__(
@@ -196,7 +222,9 @@ class LoggerCallback(Callback):
         self.file_logger = file_logger
         self.tb_logger = tb_logger
 
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+    def on_train_batch_end(
+        self, trainer, pl_module, outputs, batch, batch_idx
+    ):
         loss_value = outputs["loss"]
         pl_module.log("train_loss", loss_value, prog_bar=True, logger=False)
 

@@ -27,6 +27,7 @@ class HeterogenousAttributesNetwork(nn.Module):
         inner_activation_function: Callable = nn.ReLU(),
         output_activation_function: Callable = nn.Identity(),
         is_classifier: bool = False,
+        softmax_hidden: bool = True,
     ):
         """
         Args:
@@ -90,7 +91,7 @@ class HeterogenousAttributesNetwork(nn.Module):
             hidden_size,
             dropout_rate,
             inner_activation_function,
-            inner_activation_function,
+            nn.Softmax(),
         )
 
         self.features_encoding_network = FeedForwardNetwork(
@@ -355,6 +356,7 @@ class HeterogenousAttributesNetwork(nn.Module):
                 of attributes in rows.
         """
         initial_tensor_shape = set_.shape
+
         representation_length = encoder_network.output_size
         network_input = set_.reshape(-1, 1)
         encoded_input = encoder_network(network_input)
