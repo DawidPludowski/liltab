@@ -204,6 +204,9 @@ class HeterogenousAttributesNetworkTrainer:
             weight_decay=self.weight_decay,
         )
         self.trainer.fit(encoder_wrapper, train_loader)
+
+        # self.trainer.save_checkpoint("final_model.ckpt")
+
         return encoder_wrapper
 
 

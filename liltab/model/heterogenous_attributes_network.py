@@ -176,13 +176,13 @@ class HeterogenousAttributesNetwork(nn.Module):
 
     def change_head(self, hidden_representation_size: int) -> None:
         self.interaction_representation_network = FeedForwardNetwork(
-            hidden_representation_size,
             self._hidden_representation_size,
+            hidden_representation_size,
             self._n_hidden_layers,
             self._hidden_size,
             self._dropout_rate,
             self._inner_activation_function,
-            self._inner_activation_function,
+            nn.Softmax(),
         )
 
     def _forward_with_full_trace(
