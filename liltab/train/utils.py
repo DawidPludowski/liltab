@@ -1,11 +1,13 @@
+from typing import Any, Callable, List
+
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+from torch import Tensor, optim
 
-from torch import optim, Tensor
-from typing import Any, Callable, List
-
-from ..model.heterogenous_attributes_network import HeterogenousAttributesNetwork
+from ..model.heterogenous_attributes_network import (
+    HeterogenousAttributesNetwork,
+)
 
 
 class LightningWrapper(pl.LightningModule):
@@ -39,16 +41,24 @@ class LightningWrapper(pl.LightningModule):
 
         self.save_hyperparameters()
 
-    def training_step(self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx) -> float:
+    def training_step(
+        self,
+        batch: list[tuple[Tensor, Tensor, Tensor, Tensor]],
+        batch_idx: Any,
+    ) -> float:
         sum_loss_value = 0.0
         supports_representations = [None] * len(batch)
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, y_query) = example
-            full_trace = self.model(X_support, y_support, X_query, return_full_trace=True)
+            full_trace = self.model(
+                X_support, y_support, X_query, return_full_trace=True
+            )
             prediction = full_trace["prediction"]
 
-            supports_representations[i] = full_trace["support_set_representation"]
+            supports_representations[i] = full_trace[
+                "support_set_representation"
+            ]
             indices[i] = idx
             loss = torch.nn.CrossEntropyLoss()(prediction, y_query)
             if torch.isnan(loss):
@@ -59,7 +69,9 @@ class LightningWrapper(pl.LightningModule):
         if self.representation_penalty_weight != 0:
             rep_loss = (
                 self.representation_penalty_weight
-                * self._calculate_representation_penalty(supports_representations, indices)
+                * self._calculate_representation_penalty(
+                    supports_representations, indices
+                )
                 / 4
             )
             sum_loss_value += rep_loss
@@ -74,10 +86,14 @@ class LightningWrapper(pl.LightningModule):
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, y_query) = example
-            full_trace = self.model(X_support, y_support, X_query, return_full_trace=True)
+            full_trace = self.model(
+                X_support, y_support, X_query, return_full_trace=True
+            )
             prediction = full_trace["prediction"]
 
-            supports_representations[i] = full_trace["support_set_representation"]
+            supports_representations[i] = full_trace[
+                "support_set_representation"
+            ]
             indices[i] = idx
             loss = torch.nn.CrossEntropyLoss()(prediction, y_query)
             if torch.isnan(loss):
@@ -88,23 +104,31 @@ class LightningWrapper(pl.LightningModule):
         if self.representation_penalty_weight != 0:
             rep_loss = (
                 self.representation_penalty_weight
-                * self._calculate_representation_penalty(supports_representations, indices)
+                * self._calculate_representation_penalty(
+                    supports_representations, indices
+                )
                 / 4
             )
             sum_loss_value += rep_loss
 
         return sum_loss_value
 
-    def test_step(self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx) -> float:
+    def test_step(
+        self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx
+    ) -> float:
         sum_loss_value = 0.0
         supports_representations = [None] * len(batch)
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, y_query) = example
-            full_trace = self.model(X_support, y_support, X_query, return_full_trace=True)
+            full_trace = self.model(
+                X_support, y_support, X_query, return_full_trace=True
+            )
             prediction = full_trace["prediction"]
 
-            supports_representations[i] = full_trace["support_set_representation"]
+            supports_representations[i] = full_trace[
+                "support_set_representation"
+            ]
             indices[i] = idx
             loss = torch.nn.CrossEntropyLoss()(prediction, y_query)
             if torch.isnan(loss):
@@ -115,7 +139,9 @@ class LightningWrapper(pl.LightningModule):
         if self.representation_penalty_weight != 0:
             rep_loss = (
                 self.representation_penalty_weight
-                * self._calculate_representation_penalty(supports_representations, indices)
+                * self._calculate_representation_penalty(
+                    supports_representations, indices
+                )
                 / 4
             )
             sum_loss_value += rep_loss
@@ -123,21 +149,33 @@ class LightningWrapper(pl.LightningModule):
         return sum_loss_value
 
     def _calculate_representation_penalty(
-        self, supports_representations: List[Tensor], dataset_indices: List[int]
+        self,
+        supports_representations: List[Tensor],
+        dataset_indices: List[int],
     ):
         support_size = supports_representations[0].shape[0]
-        supports_representations_to_penalty = torch.concat(supports_representations, dim=0)
+        supports_representations_to_penalty = torch.concat(
+            supports_representations, dim=0
+        )
         dist_matrix = torch.cdist(
-            supports_representations_to_penalty, supports_representations_to_penalty
+            supports_representations_to_penalty,
+            supports_representations_to_penalty,
         )
         indices_to_mask = (
-            torch.Tensor(dataset_indices).reshape(-1, 1).repeat((1, support_size)).reshape(-1, 1)
+            torch.Tensor(dataset_indices)
+            .reshape(-1, 1)
+            .repeat((1, support_size))
+            .reshape(-1, 1)
         )
         mask = (-1) ** (torch.cdist(indices_to_mask, indices_to_mask) == 0)
         return (dist_matrix * mask).sum()
 
     def configure_optimizers(self) -> Any:
-        return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        return optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
 
 
 class LightningEncoderWrapper(pl.LightningModule):
@@ -155,14 +193,20 @@ class LightningEncoderWrapper(pl.LightningModule):
 
         self.save_hyperparameters()
 
-    def training_step(self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx) -> float:
+    def training_step(
+        self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx
+    ) -> float:
         supports_representations = [None] * len(batch)
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, _) = example
-            supports_representations[i] = self.model.encode_support_set(X_support, y_support)
+            supports_representations[i] = self.model.encode_support_set(
+                X_support, y_support
+            )
             indices[i] = idx
-        return self._calculate_representation_penalty(supports_representations, indices)
+        return self._calculate_representation_penalty(
+            supports_representations, indices
+        )
 
     def validation_step(
         self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx
@@ -171,33 +215,136 @@ class LightningEncoderWrapper(pl.LightningModule):
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, _) = example
-            supports_representations[i] = self.model.encode_support_set(X_support, y_support)
+            supports_representations[i] = self.model.encode_support_set(
+                X_support, y_support
+            )
             indices[i] = idx
-        return self._calculate_representation_penalty(supports_representations, indices)
+        return self._calculate_representation_penalty(
+            supports_representations, indices
+        )
 
-    def test_step(self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx) -> float:
+    def test_step(
+        self, batch: list[tuple[Tensor, Tensor, Tensor, Tensor]], batch_idx
+    ) -> float:
         supports_representations = [None] * len(batch)
         indices = [None] * len(batch)
         for i, example in enumerate(batch):
             idx, (X_support, y_support, X_query, _) = example
-            supports_representations[i] = self.model.encode_support_set(X_support, y_support)
+            supports_representations[i] = self.model.encode_support_set(
+                X_support, y_support
+            )
             indices[i] = idx
-        return self._calculate_representation_penalty(supports_representations, indices)
+        return self._calculate_representation_penalty(
+            supports_representations, indices
+        )
 
     def _calculate_representation_penalty(
-        self, supports_representations: List[Tensor], dataset_indices: List[int]
+        self,
+        supports_representations: List[Tensor],
+        dataset_indices: List[int],
     ):
         support_size = supports_representations[0].shape[0]
-        supports_representations_to_penalty = torch.concat(supports_representations, dim=0)
+        supports_representations_to_penalty = torch.concat(
+            supports_representations, dim=0
+        )
         data_length = supports_representations_to_penalty.shape[0]
         dist_matrix = torch.cdist(
-            supports_representations_to_penalty, supports_representations_to_penalty
+            supports_representations_to_penalty,
+            supports_representations_to_penalty,
         )
         indices_to_mask = (
-            torch.Tensor(dataset_indices).reshape(-1, 1).repeat((1, support_size)).reshape(-1, 1)
+            torch.Tensor(dataset_indices)
+            .reshape(-1, 1)
+            .repeat((1, support_size))
+            .reshape(-1, 1)
         )
         mask = (-1) ** (torch.cdist(indices_to_mask, indices_to_mask) == 0)
         return (dist_matrix * mask).sum() / (data_length * (data_length - 1))
 
     def configure_optimizers(self) -> Any:
-        return optim.Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        return optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )
+
+
+class LightningAdaptiveeWrapper(pl.LightningModule):
+
+    def __init__(
+        self,
+        model: HeterogenousAttributesNetwork,
+        learning_rate: float,
+        weight_decay: float,
+    ):
+        super().__init__()
+        self.model = model
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+
+        self.metrics_history = dict()
+
+        self.save_hyperparameters()
+
+    def training_step(
+        self, batch: list[tuple[Tensor, Tensor]], batch_idx
+    ) -> Tensor | torch.Dict[str, Any]:
+
+        supports_representations: list[Tensor] = []
+        ys: list[Tensor] = []
+        for i, example in enumerate(batch):
+            X, y, _, _ = example[1]
+            supports_representations.append(self.model.encode_features_set(X))
+            ys.append(y)
+
+        supports_representations = torch.concatenate(supports_representations)
+        ys = torch.concatenate(ys)
+        mse_err = torch.mean((supports_representations - ys) ** 2)
+
+        self.log(
+            "loss/mse",
+            mse_err,
+            on_step=True,
+            on_epoch=True,
+            prog_bar=True,
+            logger=True,
+        )
+
+        return mse_err
+
+    def validation_step(
+        self, batch: list[tuple[Tensor, Tensor]], batch_idx
+    ) -> Tensor | torch.Dict[str, Any]:
+
+        supports_representations: list[Tensor] = []
+        ys: list[Tensor] = []
+        for i, example in enumerate(batch):
+            X, y, _, _ = example[1]
+            supports_representations.append(self.model.encode_features_set(X))
+            ys.append(y)
+
+        supports_representations = torch.concatenate(supports_representations)
+        ys = torch.concatenate(ys)
+        return torch.sum((supports_representations - ys) ** 2)
+
+    def test_step(
+        self, batch: list[tuple[Tensor, Tensor]], batch_idx
+    ) -> Tensor | torch.Dict[str, Any]:
+
+        supports_representations: list[Tensor] = []
+        ys: list[Tensor] = []
+        for i, example in enumerate(batch):
+            X, y, _, _ = example[1]
+            supports_representations.append(self.model.encode_features_set(X))
+            ys.append(y)
+
+        supports_representations = torch.concatenate(supports_representations)
+        ys = torch.concatenate(ys)
+        return torch.sum((supports_representations - ys) ** 2)
+
+    def configure_optimizers(self) -> Any:
+        return optim.Adam(
+            self.parameters(),
+            lr=self.learning_rate,
+            weight_decay=self.weight_decay,
+        )

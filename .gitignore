@@ -165,3 +165,7 @@ cython_debug/
 .coverage
 lightning_logs/*
 *.ipynb
+
+# prototype notebooks
+
+notebooks/
