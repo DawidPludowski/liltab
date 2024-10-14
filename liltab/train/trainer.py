@@ -45,6 +45,7 @@ class HeterogenousAttributesNetworkTrainer:
         tb_logger: bool = True,
         model_checkpoints: bool = True,
         results_path: Union[str, Path, None] = None,
+        y_size: None | int = None
     ):
         """
         Args:
@@ -67,6 +68,8 @@ class HeterogenousAttributesNetworkTrainer:
                 model checkpoints; required only if any of `file_logger`,
                 `tb_logger`, `model_checkpoints` is not None
         """
+        
+        self.y_size = y_size if y_size is not None else 8 
 
         if not results_path and (
             file_logger or tb_logger or model_checkpoints
@@ -190,6 +193,8 @@ class HeterogenousAttributesNetworkTrainer:
             learning_rate=self.learning_rate,
             weight_decay=self.weight_decay,
         )
+        
+        
         self.trainer.fit(encoder_wrapper, train_loader, val_loader)
         return encoder_wrapper
 
@@ -202,7 +207,10 @@ class HeterogenousAttributesNetworkTrainer:
             model,
             learning_rate=self.learning_rate,
             weight_decay=self.weight_decay,
+            y_size=self.y_size
         )
+        
+        
         self.trainer.fit(encoder_wrapper, train_loader)
 
         # self.trainer.save_checkpoint("final_model.ckpt")

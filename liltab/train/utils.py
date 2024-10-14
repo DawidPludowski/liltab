@@ -276,11 +276,13 @@ class LightningAdaptiveeWrapper(pl.LightningModule):
         model: HeterogenousAttributesNetwork,
         learning_rate: float,
         weight_decay: float,
+        y_size: int = 8
     ):
         super().__init__()
         self.model = model
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
+        self.y_size = y_size
 
         self.metrics_history = dict()
 
@@ -294,6 +296,11 @@ class LightningAdaptiveeWrapper(pl.LightningModule):
         ys: list[Tensor] = []
         for i, example in enumerate(batch):
             X, y, _, _ = example[1]
+            
+            if y.shape[1] < self.y_size:
+                padd = torch.zeros(size=(y.shape[0], (self.y_size - y.shape[1]))).to('cuda')
+                y = torch.cat([y, padd], dim=1)
+            
             supports_representations.append(self.model.encode_features_set(X))
             ys.append(y)
 
@@ -311,36 +318,6 @@ class LightningAdaptiveeWrapper(pl.LightningModule):
         )
 
         return mse_err
-
-    def validation_step(
-        self, batch: list[tuple[Tensor, Tensor]], batch_idx
-    ) -> Tensor | torch.Dict[str, Any]:
-
-        supports_representations: list[Tensor] = []
-        ys: list[Tensor] = []
-        for i, example in enumerate(batch):
-            X, y, _, _ = example[1]
-            supports_representations.append(self.model.encode_features_set(X))
-            ys.append(y)
-
-        supports_representations = torch.concatenate(supports_representations)
-        ys = torch.concatenate(ys)
-        return torch.sum((supports_representations - ys) ** 2)
-
-    def test_step(
-        self, batch: list[tuple[Tensor, Tensor]], batch_idx
-    ) -> Tensor | torch.Dict[str, Any]:
-
-        supports_representations: list[Tensor] = []
-        ys: list[Tensor] = []
-        for i, example in enumerate(batch):
-            X, y, _, _ = example[1]
-            supports_representations.append(self.model.encode_features_set(X))
-            ys.append(y)
-
-        supports_representations = torch.concatenate(supports_representations)
-        ys = torch.concatenate(ys)
-        return torch.sum((supports_representations - ys) ** 2)
 
     def configure_optimizers(self) -> Any:
         return optim.Adam(
