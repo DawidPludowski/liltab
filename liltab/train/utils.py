@@ -290,7 +290,7 @@ class LightningAdaptiveeWrapper(pl.LightningModule):
 
     def training_step(
         self, batch: list[tuple[Tensor, Tensor]], batch_idx
-    ) -> Tensor | torch.Dict[str, Any]:
+    ):
 
         supports_representations: list[Tensor] = []
         ys: list[Tensor] = []
