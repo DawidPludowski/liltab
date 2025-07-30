@@ -129,6 +129,26 @@ class Dataset(ABC):
     def __len__(self) -> int:
         return self.df.shape[0]
 
+class AdaptiveeDataset:
+    
+    def __init__(self, path, model_id: str, alpha: str, ignore_easy: bool = True):
+        self.path = path
+        self.target_name = f'{model_id}-{alpha}'
+        data = np.load(path)
+        
+        if not ignore_easy:
+            self.X = data['X']
+            self.y = data[self.target_name]
+        else:
+            preds = data[f'{model_id}-PRED']
+            preds = (preds > 0.5).astype(int)
+            preds_mean = preds.mean(axis=1)
+            easy = (preds_mean == 0) + (preds_mean == 1)
+            self.X = data['X'][~easy]
+            self.y = data['y'][~easy]
+            
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 class PandasDataset(Dataset):
     """
