@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 from torch import Tensor, optim
+from torch import nn
 
 from ..model.heterogenous_attributes_network import (
     HeterogenousAttributesNetwork,
@@ -299,33 +300,28 @@ class LightningAdaptiveeWrapper(pl.LightningModule):
 
         supports_representations = torch.concatenate(supports_representations)
         ys = torch.concatenate(ys)
-        mse_err = torch.mean((supports_representations - ys) ** 2)
+        loss_fn = nn.KLDivLoss(log_target=False)
+        
+        loss = loss_fn(supports_representations, ys)
+
+
 
         self.log(
             "loss/mse",
-            mse_err,
+            loss,
             on_step=True,
             on_epoch=True,
             prog_bar=True,
             logger=True,
         )
 
-        return mse_err
+        return loss
 
     def validation_step(
         self, batch: list[tuple[Tensor, Tensor]], batch_idx
     ) -> Tensor | torch.Dict[str, Any]:
 
-        supports_representations: list[Tensor] = []
-        ys: list[Tensor] = []
-        for i, example in enumerate(batch):
-            X, y, _, _ = example[1]
-            supports_representations.append(self.model.encode_features_set(X))
-            ys.append(y)
-
-        supports_representations = torch.concatenate(supports_representations)
-        ys = torch.concatenate(ys)
-        return torch.sum((supports_representations - ys) ** 2)
+        return self.training_step(batch, batch_idx)
 
     def test_step(
         self, batch: list[tuple[Tensor, Tensor]], batch_idx

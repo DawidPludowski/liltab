@@ -135,20 +135,29 @@ class AdaptiveeDataset:
         self.path = path
         self.target_name = f'{model_id}-{alpha}'
         data = np.load(path)
-        
+                        
         if not ignore_easy:
             self.X = data['X']
             self.y = data[self.target_name]
         else:
-            preds = data[f'{model_id}-PRED']
+            preds = data[f'{model_id}-PREDS']
             preds = (preds > 0.5).astype(int)
             preds_mean = preds.mean(axis=1)
             easy = (preds_mean == 0) + (preds_mean == 1)
             self.X = data['X'][~easy]
-            self.y = data['y'][~easy]
+            self.y = data[self.target_name][~easy]
+            
+        self.y = torch.from_numpy(self.y).type(torch.float32)
+        self.X = torch.from_numpy(self.X).type(torch.float32)
             
     def __getitem__(self, idx):
+        if isinstance(idx, np.ndarray):
+            idx = idx.astype(int)
+            
         return self.X[idx], self.y[idx]
+    
+    def __len__(self) -> int:
+        return self.X.shape[0]
 
 class PandasDataset(Dataset):
     """

@@ -38,8 +38,8 @@ class HeterogenousAttributesNetworkTrainer:
         learning_rate: float,
         weight_decay: float,
         representation_penalty_weight: float = 0,
-        early_stopping_intervals: int = 100,
-        check_val_every_n_epoch: int = 100,
+        early_stopping_intervals: int = 10,
+        check_val_every_n_epoch: int = 10,
         loss: Callable = nn.MSELoss(),
         file_logger: bool = True,
         tb_logger: bool = True,
@@ -105,7 +105,7 @@ class HeterogenousAttributesNetworkTrainer:
                 monitor="val_loss",
                 mode="min",
                 patience=early_stopping_intervals,
-                min_delta=1e-3,
+                min_delta=1e-4,
             )
             callbacks.append(early_stopping)
 
@@ -197,13 +197,14 @@ class HeterogenousAttributesNetworkTrainer:
         self,
         model: HeterogenousAttributesNetwork,
         train_loader: ComposedDataLoader | RepeatableOutputComposedDataLoader,
+        val_loader: ComposedDataLoader | RepeatableOutputComposedDataLoader = None,
     ) -> tuple[LightningWrapper, list[dict[str, float]]]:
         encoder_wrapper = LightningAdaptiveeWrapper(
             model,
             learning_rate=self.learning_rate,
             weight_decay=self.weight_decay,
         )
-        self.trainer.fit(encoder_wrapper, train_loader)
+        self.trainer.fit(encoder_wrapper, train_loader, val_loader)
 
         # self.trainer.save_checkpoint("final_model.ckpt")
 
